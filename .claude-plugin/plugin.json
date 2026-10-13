@@ -1,0 +1,6 @@
+{
+  "name": "limit-timer",
+  "version": "0.1.0",
+  "description": "Показывает расход 5-часового лимита и время до сброса, напоминает за час и сообщает о сбросе",
+  "author": { "name": "Sergey Sedochenko", "url": "https://sergiodesign.online" }
+}

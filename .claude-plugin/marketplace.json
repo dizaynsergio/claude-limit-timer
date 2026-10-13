@@ -1,0 +1,5 @@
+{
+  "name": "claude-limit-timer",
+  "owner": { "name": "Sergey Sedochenko" },
+  "plugins": [{ "name": "limit-timer", "source": "./" }]
+}
