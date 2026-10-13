@@ -1,8 +1,10 @@
 // ==UserScript==
 // @name         Claude Limit Timer
 // @namespace    sergiodesign.online
-// @version      1.0
-// @description  Показывает расход 5-часового лимита Claude, время до сброса, напоминает за час и сообщает о сбросе
+// @version      1.1
+// @description  Shows Claude's 5-hour usage limit and time to reset, reminds an hour before and tells you when it resets (RU/EN)
+// @description:ru  Показывает расход 5-часового лимита Claude, время до сброса, напоминает за час и сообщает о сбросе
+// @license      MIT
 // @match        https://claude.ai/*
 // @grant        GM_notification
 // @grant        GM_getValue
@@ -19,6 +21,26 @@
   const WARN_MIN = 60;             // напомнить за N минут до сброса
   const WARN_PCT = 80;             // предупредить, когда использовано ≥ N%
   const SOUND = true;              // короткий сигнал при уведомлениях
+  const LANG = 'auto';             // 'auto' | 'ru' | 'en'
+
+  const lang = LANG !== 'auto' ? LANG : ((navigator.language || '').toLowerCase().startsWith('ru') ? 'ru' : 'en');
+  const T = {
+    ru: { loading: '⏳ Лимит: загрузка…', hint: 'Клик — обновить · Двойной клик — открыть страницу лимитов', h: 'ч', m: 'м', now: 'сейчас',
+      reset: '✅ Лимит сброшен', resetMsg: 'Можно снова работать на полную', resetIdle: 'Новое 5-часовое окно начнётся со следующего сообщения',
+      hourTitle: '⏰ Час до сброса', hourMsg: (t, p) => `Окно обновится в ${t}, использовано ${p}%`,
+      highTitle: '⚠️ Лимит почти исчерпан', highMsg: p => `Использовано ${p}%`, highAt: t => `, сброс в ${t}`,
+      lineReset: '✅ Лимит сброшен · 0%', lineFree: p => `🟢 Лимит свободен · ${p}%`, line: (p, l) => `⏳ ${p}% · сброс через ${l}`,
+      tipReset: t => `Сброс 5-часового окна: ${t}`, tipWeek: p => `Недельный лимит: ${p}%`, tipWeekAt: t => ` (сброс ${t})`,
+      noData: '⚠️ Нет данных о лимите', fail: m => 'Не удалось получить лимит: ' + m + '\nДвойной клик — страница лимитов' },
+    en: { loading: '⏳ Limit: loading…', hint: 'Click to refresh · Double-click to open the usage page', h: 'h', m: 'm', now: 'now',
+      reset: '✅ Limit reset', resetMsg: 'You are back at full speed', resetIdle: 'A new 5-hour window starts with your next message',
+      hourTitle: '⏰ One hour to reset', hourMsg: (t, p) => `The window resets at ${t}, ${p}% used`,
+      highTitle: '⚠️ Limit almost used up', highMsg: p => `${p}% used`, highAt: t => `, resets at ${t}`,
+      lineReset: '✅ Limit reset · 0%', lineFree: p => `🟢 Limit free · ${p}%`, line: (p, l) => `⏳ ${p}% · resets in ${l}`,
+      tipReset: t => `5-hour window resets at ${t}`, tipWeek: p => `Weekly limit: ${p}%`, tipWeekAt: t => ` (resets ${t})`,
+      noData: '⚠️ No limit data', fail: m => 'Could not read the limit: ' + m + '\nDouble-click to open the usage page' },
+  }[lang];
+  const LOCALE = lang === 'ru' ? 'ru-RU' : undefined;
 
   let orgId = null;
   let data = null;                 // { pct, resetsAt (ms), weekPct, weekResetsAt }
@@ -45,8 +67,8 @@
 
   const badge = document.createElement('div');
   badge.id = 'clt-badge';
-  badge.innerHTML = `<div id="clt-text">⏳ Лимит: загрузка…</div><div id="clt-bar"><div id="clt-fill"></div></div>`;
-  badge.title = 'Клик — обновить · Двойной клик — открыть страницу лимитов';
+  badge.innerHTML = `<div id="clt-text">${T.loading}</div><div id="clt-bar"><div id="clt-fill"></div></div>`;
+  badge.title = T.hint;
   document.body.appendChild(badge);
 
   const toast = document.createElement('div');
@@ -92,13 +114,14 @@
 
   // ===== Формат =====
   function fmtLeft(ms) {
-    if (ms <= 0) return 'сейчас';
+    if (ms <= 0) return T.now;
     const m = Math.ceil(ms / 60000);
     const h = Math.floor(m / 60), mm = m % 60;
-    return h ? `${h}ч ${mm}м` : `${mm}м`;
+    if (!h) return `${mm}${T.m}`;
+    return mm ? `${h}${T.h} ${mm}${T.m}` : `${h}${T.h}`;
   }
   function fmtTime(ts) {
-    return new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    return new Date(ts).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
   }
   function color(p) {
     return p >= WARN_PCT ? '#e5484d' : p >= 50 ? '#f5a524' : '#46a758';
@@ -131,25 +154,25 @@
 
     // Сброс: окно сменилось, а раньше лимит был потрачен
     if (prevWin && prevWin !== winKey && prevPct != null && prevPct > 0 && d.pct < prevPct) {
-      notify('✅ Лимит сброшен', 'Можно снова работать на полную');
+      notify(T.reset, T.resetMsg);
     }
     // Окно истекло, а новых сообщений ещё не было
     const prevReset = Number(prevWin);
     if (prevReset && now >= prevReset && !store.get('clt_reset_' + prevWin) && prevPct > 0) {
       store.set('clt_reset_' + prevWin, 1);
-      if (prevWin === winKey) notify('✅ Лимит сброшен', 'Новое 5-часовое окно начнётся со следующего сообщения');
+      if (prevWin === winKey) notify(T.reset, T.resetIdle);
     }
 
     if (d.resetsAt) {
       const left = d.resetsAt - now;
       if (left > 0 && left <= WARN_MIN * 60000 && !store.get('clt_warn_' + winKey)) {
         store.set('clt_warn_' + winKey, 1);
-        notify('⏰ Час до сброса', `Окно обновится в ${fmtTime(d.resetsAt)}, использовано ${d.pct}%`);
+        notify(T.hourTitle, T.hourMsg(fmtTime(d.resetsAt), d.pct));
       }
     }
     if (d.pct >= WARN_PCT && !store.get('clt_pctwarn_' + winKey)) {
       store.set('clt_pctwarn_' + winKey, 1);
-      notify('⚠️ Лимит почти исчерпан', `Использовано ${d.pct}%` + (d.resetsAt ? `, сброс в ${fmtTime(d.resetsAt)}` : ''));
+      notify(T.highTitle, T.highMsg(d.pct) + (d.resetsAt ? T.highAt(fmtTime(d.resetsAt)) : ''));
     }
 
     store.set('clt_window', winKey);
@@ -164,19 +187,19 @@
     const now = Date.now();
     let line;
     if (!data.resetsAt || data.resetsAt <= now) {
-      line = data.resetsAt && data.resetsAt <= now ? `✅ Лимит сброшен · 0%` : `🟢 Лимит свободен · ${data.pct}%`;
+      line = data.resetsAt && data.resetsAt <= now ? T.lineReset : T.lineFree(data.pct);
       fill.style.width = (data.resetsAt <= now ? 0 : data.pct) + '%';
     } else {
-      line = `⏳ ${data.pct}% · сброс через ${fmtLeft(data.resetsAt - now)}`;
+      line = T.line(data.pct, fmtLeft(data.resetsAt - now));
       fill.style.width = Math.min(100, data.pct) + '%';
     }
     text.textContent = line;
     fill.style.background = color(data.pct);
     badge.title =
-      (data.resetsAt ? `Сброс 5-часового окна: ${fmtTime(data.resetsAt)}\n` : '') +
-      (data.weekPct != null ? `Недельный лимит: ${data.weekPct}%` +
-        (data.weekResetsAt ? ` (сброс ${new Date(data.weekResetsAt).toLocaleString('ru-RU', { weekday: 'short', hour: '2-digit', minute: '2-digit' })})` : '') + '\n' : '') +
-      'Клик — обновить · Двойной клик — страница лимитов';
+      (data.resetsAt ? T.tipReset(fmtTime(data.resetsAt)) + '\n' : '') +
+      (data.weekPct != null ? T.tipWeek(data.weekPct) +
+        (data.weekResetsAt ? T.tipWeekAt(new Date(data.weekResetsAt).toLocaleString(LOCALE, { weekday: 'short', hour: '2-digit', minute: '2-digit' })) : '') + '\n' : '') +
+      T.hint;
   }
 
   async function refresh(manual) {
@@ -185,8 +208,8 @@
       checkAlerts(data);
       render();
     } catch (e) {
-      document.getElementById('clt-text').textContent = '⚠️ Нет данных о лимите';
-      badge.title = 'Не удалось получить лимит: ' + e.message + '\nДвойной клик — страница лимитов';
+      document.getElementById('clt-text').textContent = T.noData;
+      badge.title = T.fail(e.message);
       if (manual) console.warn('[Claude Limit Timer]', e);
     }
   }

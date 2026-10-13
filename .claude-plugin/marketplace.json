@@ -1,5 +1,6 @@
 {
   "name": "claude-limit-timer",
-  "owner": { "name": "Sergey Sedochenko" },
+  "description": "Claude Code mod: 5-hour usage limit timer with reminders (RU/EN)",
+  "owner": { "name": "Sergey Sedochenko", "url": "https://github.com/dizaynsergio" },
   "plugins": [{ "name": "limit-timer", "source": "./" }]
 }

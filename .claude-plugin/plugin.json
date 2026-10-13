@@ -1,6 +1,17 @@
 {
   "name": "limit-timer",
-  "version": "0.1.0",
-  "description": "Показывает расход 5-часового лимита и время до сброса, напоминает за час и сообщает о сбросе",
-  "author": { "name": "Sergey Sedochenko", "url": "https://sergiodesign.online" }
+  "version": "0.2.0",
+  "description": "Shows the 5-hour Claude usage limit and time to reset, reminds an hour before and tells you when it resets (RU/EN)",
+  "author": { "name": "Sergey Sedochenko", "url": "https://sergiodesign.online" },
+  "homepage": "https://github.com/dizaynsergio/claude-limit-timer",
+  "license": "MIT",
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Language / Язык",
+      "description": "auto follows your system locale (Russian for ru_*, English otherwise)",
+      "default": "auto",
+      "options": ["auto", "ru", "en"]
+    }
+  }
 }
