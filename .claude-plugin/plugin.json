@@ -1,6 +1,6 @@
 {
   "name": "limit-timer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Shows the 5-hour Claude usage limit and time to reset, reminds an hour before and tells you when it resets (RU/EN)",
   "author": { "name": "Sergey Sedochenko", "url": "https://sergiodesign.online" },
   "homepage": "https://github.com/sedochenkos/claude-limit-timer",

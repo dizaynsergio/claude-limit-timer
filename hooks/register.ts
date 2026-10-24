@@ -59,8 +59,20 @@ function take(limits: readonly SessionRateLimit[]) {
 
 async function pickLang($: EngineInterface, setting: unknown): Promise<Lang> {
   if (setting === 'ru' || setting === 'en') return setting
-  const locale = (await $.env.get('LC_ALL')) || (await $.env.get('LANG')) || ''
+  const locale =
+    (await $.env.get('LC_ALL')) || (await $.env.get('LC_MESSAGES')) || (await $.env.get('LANG')) || (await systemLocale($))
   return locale.toLowerCase().startsWith('ru') ? 'ru' : 'en'
+}
+
+// Apps started from the macOS Dock (the Claude desktop app) get no LANG, and Intl here always says en-US,
+// so ask macOS itself. ponytail: macOS only; Windows/Linux without LANG fall back to English
+async function systemLocale($: EngineInterface): Promise<string> {
+  try {
+    const { exitCode, stdout } = await $.process.run(['defaults', 'read', '-g', 'AppleLocale'], { timeoutMs: 3000 })
+    return exitCode === 0 ? stdout.trim() : ''
+  } catch {
+    return '' // no `defaults` on this system
+  }
 }
 
 async function alert($: EngineInterface, text: string) {

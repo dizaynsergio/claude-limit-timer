@@ -9,10 +9,15 @@ const LIMITS = [
   { kind: 'seven_day', percentUsed: 12.5, resetsAt: new Date(START + 3 * 24 * 60 * MIN).toISOString() },
 ]
 
-function engine(on: On, rateLimits: typeof LIMITS, env: Record<string, string> = {}) {
+function engine(on: On, rateLimits: typeof LIMITS, env: Record<string, string> = {}, appleLocale?: string) {
   const clock = mock.clock(on, { now: START })
   mock.store(on)
   mock.env(on, env)
+  on('process.run', () => ({
+    value: appleLocale
+      ? { exitCode: 0, stdout: `${appleLocale}\n`, stderr: '' }
+      : { exitCode: 1, stdout: '', stderr: 'does not exist' },
+  }))
   const seen = { statuses: [] as (string | undefined)[], toasts: [] as string[], notes: [] as string[] }
   on('ui.status', (_$, e) => {
     seen.statuses.push(e.text)
@@ -79,6 +84,18 @@ test('auto picks Russian for a ru_* locale', async ($, on) => {
 
 test('auto picks English for any other locale', async ($, on) => {
   const { seen } = engine(on, LIMITS, { LANG: 'en_US.UTF-8' })
+  await $.session.start(START_ARGS)
+  expect(seen.statuses.at(-1)).toContain('5h limit')
+})
+
+test('auto with empty LANG (desktop app) reads the macOS locale', async ($, on) => {
+  const { seen } = engine(on, LIMITS, {}, 'ru_KZ')
+  await $.session.start(START_ARGS)
+  expect(seen.statuses.at(-1)).toContain('Лимит 5ч')
+})
+
+test('auto with empty LANG and no macOS locale falls back to English', async ($, on) => {
+  const { seen } = engine(on, LIMITS)
   await $.session.start(START_ARGS)
   expect(seen.statuses.at(-1)).toContain('5h limit')
 })
