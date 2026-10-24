@@ -19,7 +19,7 @@ The figures come from Claude Code itself (the rate-limit windows each response r
 At the prompt of a Claude Code terminal session, type:
 
 ```
-/plugin install limit-timer --marketplace dizaynsergio/claude-limit-timer
+/plugin install limit-timer --marketplace sedochenkos/claude-limit-timer
 ```
 
 Answer `y` to add the marketplace, then press Enter to pick the user scope. Run `/reload-plugins` (or start a new session). The mod also loads in the Code tab of the Claude desktop app.
@@ -60,7 +60,7 @@ claude plugin test .
 В поле ввода сессии Claude Code в терминале введи:
 
 ```
-/plugin install limit-timer --marketplace dizaynsergio/claude-limit-timer
+/plugin install limit-timer --marketplace sedochenkos/claude-limit-timer
 ```
 
 Ответь `y` на добавление маркетплейса, затем Enter для области «user». Выполни `/reload-plugins` (или открой новую сессию). Мод работает и во вкладке Code десктоп-приложения Claude.
